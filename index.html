@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Astra QC Agent — Syyclops</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --border: #30363d;
+    --accent: #2f81f7;
+    --accent2: #388bfd;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #6e7681;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* Login Screen */
+  #login-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+  }
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 40px 36px;
+    width: 360px;
+  }
+  .login-logo-mark { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+  .login-logo-name { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .login-logo-name span { color: var(--accent); }
+  .login-sub { font-size: 12.5px; color: var(--text3); margin-bottom: 28px; }
+  .login-label { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 6px; }
+  .login-input {
+    width: 100%; padding: 9px 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 13.5px;
+    font-family: var(--sans); outline: none; margin-bottom: 14px;
+    transition: border 0.15s;
+  }
+  .login-input:focus { border-color: var(--accent); }
+  .login-btn {
+    width: 100%; padding: 10px;
+    background: var(--accent); color: white;
+    border: none; border-radius: 6px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: var(--sans);
+    transition: background 0.15s; margin-top: 4px;
+  }
+  .login-btn:hover { background: var(--accent2); }
+  .login-error {
+    font-size: 12px; color: var(--red);
+    background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.2);
+    border-radius: 6px; padding: 8px 12px;
+    margin-bottom: 14px; display: none;
+  }
+  .login-footer { font-size: 11px; color: var(--text3); text-align: center; margin-top: 20px; }
+
+  #app { display: none; width: 100%; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 220px;
+    min-height: 100vh;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 0;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+  }
+
+  .logo {
+    padding: 0 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-mark {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .logo-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .logo-name span { color: var(--accent); }
+
+  .nav { margin-top: 16px; flex: 1; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 20px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text2);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(47,129,247,0.08); }
+  .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text3);
+  }
+  .status-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Main */
+  .main {
+    margin-left: 220px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .topbar-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  .btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    font-family: var(--sans);
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-green { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+  .btn-green:hover { background: rgba(63,185,80,0.25); }
+  .btn-red { background: rgba(248,81,73,0.15); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+  .btn-red:hover { background: rgba(248,81,73,0.25); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .content { padding: 28px 32px; flex: 1; }
+
+  /* Page sections */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Stats row */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+  }
+  .stat-label { font-size: 11.5px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; }
+  .stat-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+  .stat-up { color: var(--green); }
+  .stat-down { color: var(--red); }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+  .card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .card-body { padding: 20px; }
+
+  /* Run tasks panel */
+  .tasks-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .task-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .task-chip:hover { border-color: var(--accent); }
+  .task-chip.selected { border-color: var(--accent); background: rgba(47,129,247,0.1); }
+  .task-chip input[type=checkbox] { accent-color: var(--accent); }
+  .task-chip-label { font-size: 12.5px; font-family: var(--mono); color: var(--text); }
+
+  /* Results */
+  .result-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+  }
+  .result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .result-task-id { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); }
+  .score-badge {
+    font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 20px;
+    background: rgba(47,129,247,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(47,129,247,0.3);
+  }
+  .score-badge.high { background: rgba(63,185,80,0.15); color: var(--green); border-color: rgba(63,185,80,0.3); }
+  .score-badge.mid { background: rgba(210,153,34,0.15); color: var(--yellow); border-color: rgba(210,153,34,0.3); }
+  .score-badge.low { background: rgba(248,81,73,0.15); color: var(--red); border-color: rgba(248,81,73,0.3); }
+  .assessment-line { font-size: 13px; color: var(--text2); margin-bottom: 12px; font-style: italic; }
+
+  .improvements-list { list-style: none; }
+  .improvement-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .improvement-row:last-child { border-bottom: none; }
+  .priority-tag {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-top: 1px;
+  }
+  .priority-high { background: rgba(248,81,73,0.15); color: var(--red); }
+  .priority-medium { background: rgba(210,153,34,0.15); color: var(--yellow); }
+  .priority-low { background: rgba(63,185,80,0.15); color: var(--green); }
+
+  .approve-row { display: flex; gap: 8px; margin-top: 14px; align-items: center; }
+  .approve-label { font-size: 12px; color: var(--text3); flex: 1; }
+
+  /* Progress bar */
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 12px; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s; }
+
+  /* Running state */
+  .running-indicator {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(47,129,247,0.08);
+    border: 1px solid rgba(47,129,247,0.25);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--accent);
+    display: none;
+  }
+  .running-indicator.visible { display: flex; }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(47,129,247,0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Trend section */
+  .trend-row { display: flex; gap: 16px; }
+  .trend-week {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 14px 16px; text-align: center;
+  }
+  .trend-week-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+  .trend-week-score { font-size: 22px; font-weight: 700; color: var(--text); }
+  .trend-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 600;
+    padding: 2px 10px; border-radius: 20px; margin-top: 4px;
+  }
+
+  /* Config page */
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; display: block; }
+  .form-input {
+    width: 100%; padding: 8px 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 13px;
+    font-family: var(--sans); outline: none; transition: border 0.15s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-input.mono { font-family: var(--mono); }
+
+  /* Log */
+  .log-area {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 14px 16px; font-family: var(--mono); font-size: 12px;
+    color: var(--text2); max-height: 220px; overflow-y: auto; line-height: 1.7;
+  }
+  .log-line { display: flex; gap: 10px; }
+  .log-time { color: var(--text3); }
+  .log-info { color: var(--accent); }
+  .log-ok { color: var(--green); }
+  .log-err { color: var(--red); }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 48px 20px; color: var(--text3); }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-msg { font-size: 14px; }
+
+  /* History table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody td { padding: 11px 14px; color: var(--text2); }
+  .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .tag-blue { background: rgba(47,129,247,0.15); color: var(--accent); }
+  .tag-green { background: rgba(63,185,80,0.15); color: var(--green); }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: none; align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; width: 540px; max-height: 80vh; overflow-y: auto;
+  }
+  .modal-header {
+    padding: 18px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-size: 15px; font-weight: 600; }
+  .modal-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px; }
+  .modal-body { padding: 20px; }
+</style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo-mark">Syyclops</div>
+    <div class="login-logo-name">Astra <span>QC</span></div>
+    <div class="login-sub">Sign in to access the QC Agent dashboard</div>
+    <div class="login-error" id="login-error">Incorrect username or password.</div>
+    <label class="login-label">Username</label>
+    <input class="login-input" id="login-user" type="text" placeholder="Enter username" autocomplete="username"/>
+    <label class="login-label">Password</label>
+    <input class="login-input" id="login-pass" type="password" placeholder="Enter password" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter') doLogin()"/>
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-footer">Astra QC Agent · Syyclops Internal Tool</div>
+  </div>
+</div>
+
+<!-- App (hidden until login) -->
+<div id="app">
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">Syyclops</div>
+    <div class="logo-name">Astra <span>QC</span></div>
+  </div>
+  <div class="nav">
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <span class="nav-icon">⚡</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('run')">
+      <span class="nav-icon">▶</span> Run Tasks
+    </div>
+    <div class="nav-item" onclick="showPage('results')">
+      <span class="nav-icon">📋</span> QC Results
+    </div>
+    <div class="nav-item" onclick="showPage('history')">
+      <span class="nav-icon">📈</span> History
+    </div>
+    <div class="nav-item" onclick="showPage('improvements')">
+      <span class="nav-icon">🔁</span> Improvements
+    </div>
+    <div class="nav-item" onclick="showPage('config')">
+      <span class="nav-icon">⚙</span> Config
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div><span class="status-dot"></span>Agent Active</div>
+    <div style="margin-top:4px;">Model: <span style="color:var(--text2)">gpt-4o</span></div>
+  </div>
+</nav>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="page-title">Dashboard</div>
+      <div class="topbar-sub">Astra QC Agent — HVAC Capital Plan Review</div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-secondary" onclick="showPage('run')">▶ Run Now</button>
+      <button class="btn btn-primary" onclick="openReportModal()">📧 Send Report</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total Runs</div>
+          <div class="stat-value" id="stat-runs">0</div>
+          <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Tasks Reviewed</div>
+          <div class="stat-value" id="stat-tasks">0</div>
+          <div class="stat-sub">By Astra agent</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg QC Score</div>
+          <div class="stat-value" id="stat-score">—</div>
+          <div class="stat-sub" id="stat-score-sub">Pending first run</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Improvements Applied</div>
+          <div class="stat-value" id="stat-improvements">0</div>
+          <div class="stat-sub stat-up" id="stat-trend">↑ Self-improving</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Weekly Score Trend</div>
+          </div>
+          <div class="card-body" id="trend-body">
+            <div class="empty"><div class="empty-icon">📊</div><div class="empty-msg">Run tasks to see trends</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recent Activity</div>
+          </div>
+          <div class="card-body">
+            <div class="log-area" id="activity-log">
+              <div class="log-line"><span class="log-time">--:--</span><span class="log-info">System ready. Awaiting first QC run.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px;">
+        <div class="card-header">
+          <div class="card-title">Latest Run Summary</div>
+        </div>
+        <div class="card-body" id="latest-summary">
+          <div class="empty"><div class="empty-icon">🤖</div><div class="empty-msg">No runs yet. Go to Run Tasks to start.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RUN TASKS -->
+    <div class="page" id="page-run">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Select Tasks to Run</div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary btn-sm" onclick="selectAll()">Select All</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearAll()">Clear</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="tasks-grid" id="tasks-grid"></div>
+          <div class="running-indicator" id="running-indicator">
+            <div class="spinner"></div>
+            <span id="running-text">Running QC tasks and sending to Astra agent...</span>
+          </div>
+          <div class="progress-bar" id="progress-bar" style="display:none;">
+            <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:16px;">
+            <button class="btn btn-primary" id="run-btn" onclick="triggerRun()">
+              ▶ Run Selected Tasks
+            </button>
+            <span style="font-size:12px;color:var(--text3);align-self:center;" id="selected-count">0 tasks selected</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Run Log</div></div>
+        <div class="card-body">
+          <div class="log-area" id="run-log">
+            <div class="log-line"><span class="log-time">--:--</span><span class="log-info">Ready to run.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QC RESULTS -->
+    <div class="page" id="page-results">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Latest QC Results</div>
+          <button class="btn btn-secondary btn-sm" onclick="loadResults()">↻ Refresh</button>
+        </div>
+        <div class="card-body" id="results-body">
+          <div class="empty"><div class="empty-icon">📋</div><div class="empty-msg">Run tasks first to see results here.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="page" id="page-history">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Run History</div></div>
+        <div class="card-body" id="history-body">
+          <div class="empty"><div class="empty-icon">📈</div><div class="empty-msg">No history yet.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMPROVEMENTS -->
+    <div class="page" id="page-improvements">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Pending Improvements</div>
+          <span style="font-size:12px;color:var(--text3);">Approve to feed back into Syyclops</span>
+        </div>
+        <div class="card-body" id="improvements-body">
+          <div class="empty"><div class="empty-icon">🔁</div><div class="empty-msg">No pending improvements. Run tasks first.</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Applied Improvements Log</div></div>
+        <div class="card-body">
+          <div class="log-area" id="applied-log">
+            <div class="log-line"><span class="log-time">--:--</span><span class="log-info">No improvements applied yet.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div class="page" id="page-config">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Agent Configuration</div></div>
+        <div class="card-body">
+          <div class="config-grid">
+            <div>
+              <div class="form-group">
+                <label class="form-label">LLM Model</label>
+                <input class="form-input mono" id="cfg-model" value="gpt-4o" placeholder="gpt-4o"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">OpenAI API Key</label>
+                <input class="form-input mono" id="cfg-openai-key" type="password" placeholder="sk-..."/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Syyclops API Key</label>
+                <input class="form-input mono" id="cfg-syyclops-key" type="password" placeholder="your-key"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Syyclops Base URL</label>
+                <input class="form-input mono" id="cfg-base-url" value="https://api.syyclops.com" placeholder="https://..."/>
+              </div>
+            </div>
+            <div>
+              <div class="form-group">
+                <label class="form-label">Report Recipient Email</label>
+                <input class="form-input" id="cfg-email" placeholder="raj@company.com"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Report Frequency (days)</label>
+                <input class="form-input" id="cfg-freq" type="number" value="2" min="1" max="7"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tasks Per Day</label>
+                <input class="form-input" id="cfg-tasks" type="number" value="6" min="1" max="20"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Daily Run Time</label>
+                <input class="form-input" id="cfg-time" type="time" value="08:00"/>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:8px;">
+            <button class="btn btn-primary" onclick="saveConfig()">Save Configuration</button>
+            <span id="cfg-saved" style="font-size:12px;color:var(--green);align-self:center;display:none;">✓ Saved</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Syyclops Task IDs</div></div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">Task IDs (one per line)</label>
+            <textarea class="form-input mono" id="cfg-task-ids" rows="6" style="resize:vertical;">task_001
+task_002
+task_003
+task_004
+task_005
+task_006</textarea>
+          </div>
+          <button class="btn btn-secondary" onclick="saveTaskIds()">Update Task List</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Report Modal -->
+<div class="modal-overlay" id="report-modal" style="z-index:200;">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Send QC Report</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Recipient</label>
+        <input class="form-input" id="modal-email" placeholder="raj@company.com"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note (optional)</label>
+        <textarea class="form-input" id="modal-note" rows="3" placeholder="Any additional context..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button class="btn btn-primary" onclick="sendReport()">Send Report</button>
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────
+const state = {
+  config: {
+    model: 'gpt-4o',
+    baseUrl: 'https://api.syyclops.com',
+    reportFreq: 2,
+    tasksPerDay: 6,
+    runTime: '08:00',
+    email: '',
+    taskIds: ['task_001','task_002','task_003','task_004','task_005','task_006']
+  },
+  runs: [],
+  selectedTasks: new Set(),
+  improvements: [],
+  appliedImprovements: [],
+  stats: { totalRuns: 0, totalTasks: 0, avgScore: null, appliedCount: 0 }
+};
+
+// ── Navigation ─────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.textContent.toLowerCase().includes(name.slice(0,4))) n.classList.add('active');
+  });
+  const titles = {
+    dashboard: 'Dashboard', run: 'Run Tasks', results: 'QC Results',
+    history: 'History', improvements: 'Improvements', config: 'Configuration'
+  };
+  document.getElementById('page-title').textContent = titles[name] || name;
+  if (name === 'results') loadResults();
+  if (name === 'history') renderHistory();
+  if (name === 'improvements') renderImprovements();
+}
+
+// ── Task Grid ──────────────────────────────────────────────────────
+function renderTaskGrid() {
+  const grid = document.getElementById('tasks-grid');
+  grid.innerHTML = '';
+  state.config.taskIds.forEach(id => {
+    const chip = document.createElement('div');
+    chip.className = 'task-chip';
+    chip.dataset.id = id;
+    chip.innerHTML = `<input type="checkbox" id="chk-${id}"/><label class="task-chip-label" for="chk-${id}">${id}</label>`;
+    chip.querySelector('input').addEventListener('change', (e) => {
+      if (e.target.checked) { state.selectedTasks.add(id); chip.classList.add('selected'); }
+      else { state.selectedTasks.delete(id); chip.classList.remove('selected'); }
+      updateSelectedCount();
+    });
+    grid.appendChild(chip);
+  });
+}
+
+function selectAll() {
+  state.config.taskIds.forEach(id => {
+    state.selectedTasks.add(id);
+    const chip = document.querySelector(`.task-chip[data-id="${id}"]`);
+    if (chip) { chip.classList.add('selected'); chip.querySelector('input').checked = true; }
+  });
+  updateSelectedCount();
+}
+
+function clearAll() {
+  state.selectedTasks.clear();
+  document.querySelectorAll('.task-chip').forEach(c => {
+    c.classList.remove('selected'); c.querySelector('input').checked = false;
+  });
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  document.getElementById('selected-count').textContent = `${state.selectedTasks.size} tasks selected`;
+}
+
+// ── Simulate QC Run ────────────────────────────────────────────────
+async function triggerRun() {
+  const tasks = Array.from(state.selectedTasks);
+  if (tasks.length === 0) { alert('Please select at least one task.'); return; }
+
+  const btn = document.getElementById('run-btn');
+  const indicator = document.getElementById('running-indicator');
+  const progressBar = document.getElementById('progress-bar');
+  const progressFill = document.getElementById('progress-fill');
+  const runLog = document.getElementById('run-log');
+
+  btn.disabled = true;
+  indicator.classList.add('visible');
+  progressBar.style.display = 'block';
+  runLog.innerHTML = '';
+
+  const log = (msg, cls='log-info') => {
+    const now = new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    runLog.innerHTML += `<div class="log-line"><span class="log-time">${now}</span><span class="${cls}">${msg}</span></div>`;
+    runLog.scrollTop = runLog.scrollHeight;
+  };
+
+  log(`Starting QC run for ${tasks.length} task(s)...`);
+
+  const runResults = [];
+  for (let i = 0; i < tasks.length; i++) {
+    const tid = tasks[i];
+    document.getElementById('running-text').textContent = `Running task ${tid} (${i+1}/${tasks.length})...`;
+    progressFill.style.width = `${Math.round(((i+0.5)/tasks.length)*100)}%`;
+    log(`Running task: ${tid}`);
+    await sleep(600);
+
+    const result = simulateTaskResult(tid);
+    log(`Fetching results for ${tid}...`);
+    await sleep(400);
+    log(`Sending ${tid} to Astra agent for review...`);
+    await sleep(800);
+
+    const feedback = simulateAstraFeedback(tid, result);
+    runResults.push({ task_id: tid, status: 'success', feedback });
+    log(`✓ ${tid} reviewed — Score: ${feedback.overall_score}/100`, 'log-ok');
+    progressFill.style.width = `${Math.round(((i+1)/tasks.length)*100)}%`;
+  }
+
+  // Save run
+  const run = {
+    run_id: `run_${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    tasks: runResults,
+    task_count: runResults.length,
+    success_count: runResults.length
+  };
+  state.runs.push(run);
+
+  // Collect improvements
+  runResults.forEach(r => {
+    r.feedback.improvements.forEach(imp => {
+      state.improvements.push({ ...imp, task_id: r.task_id, run_id: run.run_id, status: 'pending' });
+    });
+  });
+
+  updateStats();
+  addActivity(`QC run complete — ${runResults.length} tasks reviewed`);
+
+  log(`Run complete. ${runResults.length}/${runResults.length} tasks reviewed successfully.`, 'log-ok');
+  log(`Report will be sent in ${state.config.reportFreq} day(s).`);
+
+  indicator.classList.remove('visible');
+  progressFill.style.width = '100%';
+  setTimeout(() => { progressBar.style.display = 'none'; progressFill.style.width = '0%'; }, 1000);
+  btn.disabled = false;
+
+  renderDashboard();
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Simulate data (replace with real API calls) ────────────────────
+function simulateTaskResult(taskId) {
+  return {
+    task_id: taskId,
+    hvac_unit_type: ['RTU-5T','AHU-10T','Chiller-50T','VRF-3T','PTAC-1.5T'][Math.floor(Math.random()*5)],
+    estimated_cost: Math.round(5000 + Math.random() * 95000),
+    labor_hours: Math.round(8 + Math.random() * 120),
+    installation_complexity: ['low','medium','high'][Math.floor(Math.random()*3)]
+  };
+}
+
+const assessmentTemplates = [
+  "Pricing is underestimated by approximately {x}% — labor and overhead not fully accounted for.",
+  "HVAC unit cost is within range but installation complexity is not reflected in the total.",
+  "Capital plan output is missing regional pricing adjustments — estimate is {x}% off benchmark.",
+  "Labor hours are reasonable but material markup is not applied correctly.",
+  "Overall pricing logic is sound but seasonal demand factors are missing from the estimate."
+];
+
+function simulateAstraFeedback(taskId, result) {
+  const score = Math.round(45 + Math.random() * 50);
+  const x = Math.round(10 + Math.random() * 30);
+  const assessment = assessmentTemplates[Math.floor(Math.random()*assessmentTemplates.length)].replace('{x}', x);
+  const priorities = ['high','high','medium','medium','low'];
+  const improvementTemplates = [
+    "Add regional labor rate multipliers based on zip code or market area.",
+    "Include material overhead markup of 15–20% on all equipment costs.",
+    "Factor in crane/rigging costs for rooftop unit installations above 2 stories.",
+    "Apply seasonal demand surcharges during peak HVAC installation periods (May–August).",
+    "Include commissioning and startup costs as a fixed percentage of equipment cost.",
+    "Add contingency buffer of 10% for projects with high installation complexity.",
+    "Separate permit and inspection fees as a line item rather than bundling into labor."
+  ];
+  const shuffled = improvementTemplates.sort(() => 0.5 - Math.random()).slice(0, 5+Math.floor(Math.random()*2));
+  return {
+    task_id: taskId,
+    one_line_assessment: assessment,
+    overall_score: score,
+    model_used: 'gpt-4o',
+    improvements: shuffled.map((s, i) => ({ id: i+1, suggestion: s, priority: priorities[i] || 'medium' })),
+    prompt_improvements: [
+      { task_area: 'Cost Estimation', suggested_prompt: 'When estimating HVAC costs, always apply regional labor rate tables and include overhead markup.' },
+      { task_area: 'Installation Complexity', suggested_prompt: 'Evaluate installation complexity using a 3-factor matrix: access, height, and existing system compatibility.' }
+    ]
+  };
+}
+
+// ── Render Results ─────────────────────────────────────────────────
+function loadResults() {
+  const body = document.getElementById('results-body');
+  if (state.runs.length === 0) {
+    body.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-msg">Run tasks first to see results here.</div></div>`;
+    return;
+  }
+  const latest = state.runs[state.runs.length - 1];
+  body.innerHTML = latest.tasks.map(t => renderResultItem(t)).join('');
+}
+
+function renderResultItem(t) {
+  if (t.status !== 'success') return '';
+  const fb = t.feedback;
+  const score = fb.overall_score;
+  const scoreClass = score >= 75 ? 'high' : score >= 50 ? 'mid' : 'low';
+  const improvementsHtml = fb.improvements.map(imp => `
+    <li class="improvement-row">
+      <span class="priority-tag priority-${imp.priority}">${imp.priority.toUpperCase()}</span>
+      <span>${imp.suggestion}</span>
+    </li>`).join('');
+  return `
+    <div class="result-item">
+      <div class="result-header">
+        <span class="result-task-id">${fb.task_id}</span>
+        <span class="score-badge ${scoreClass}">${score}/100</span>
+      </div>
+      <div class="assessment-line">📋 ${fb.one_line_assessment}</div>
+      <ul class="improvements-list">${improvementsHtml}</ul>
+      <div class="approve-row">
+        <span class="approve-label">Apply prompt improvements to Syyclops?</span>
+        <button class="btn btn-sm btn-green" onclick="approveAll('${fb.task_id}')">✓ Approve All</button>
+        <button class="btn btn-sm btn-secondary" onclick="viewPrompts('${fb.task_id}')">View Prompts</button>
+      </div>
+    </div>`;
+}
+
+function approveAll(taskId) {
+  state.improvements
+    .filter(i => i.task_id === taskId && i.status === 'pending')
+    .forEach(i => { i.status = 'approved'; });
+  state.appliedImprovements.push(...state.improvements.filter(i => i.task_id === taskId && i.status === 'approved'));
+  state.stats.appliedCount++;
+  updateStats();
+  addToAppliedLog(taskId);
+  loadResults();
+  addActivity(`Improvements approved and applied for ${taskId}`);
+}
+
+function addToAppliedLog(taskId) {
+  const log = document.getElementById('applied-log');
+  const now = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  log.innerHTML += `<div class="log-line"><span class="log-time">${now}</span><span class="log-ok">✓ Applied improvements for ${taskId} → Syyclops updated</span></div>`;
+}
+
+function viewPrompts(taskId) {
+  const run = state.runs[state.runs.length-1];
+  const task = run?.tasks.find(t => t.feedback?.task_id === taskId);
+  if (!task) return;
+  const prompts = task.feedback.prompt_improvements;
+  alert(`Prompt Improvements for ${taskId}:\n\n` + prompts.map(p => `[${p.task_area}]\n${p.suggested_prompt}`).join('\n\n'));
+}
+
+// ── History ────────────────────────────────────────────────────────
+function renderHistory() {
+  const body = document.getElementById('history-body');
+  if (state.runs.length === 0) {
+    body.innerHTML = `<div class="empty"><div class="empty-icon">📈</div><div class="empty-msg">No history yet.</div></div>`;
+    return;
+  }
+  const rows = state.runs.map((run, i) => {
+    const scores = run.tasks.filter(t => t.status==='success').map(t => t.feedback?.overall_score||0);
+    const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : 0;
+    const date = new Date(run.timestamp).toLocaleString();
+    return `<tr>
+      <td style="color:var(--text)">#${i+1}</td>
+      <td style="font-family:var(--mono);font-size:12px;">${date}</td>
+      <td><span class="tag tag-blue">${run.task_count} tasks</span></td>
+      <td><span class="tag tag-green">${avg}/100 avg</span></td>
+      <td style="color:var(--green)">${run.success_count}/${run.task_count} ok</td>
+    </tr>`;
+  }).reverse().join('');
+  body.innerHTML = `<table><thead><tr><th>#</th><th>Timestamp</th><th>Tasks</th><th>Avg Score</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ── Improvements ───────────────────────────────────────────────────
+function renderImprovements() {
+  const body = document.getElementById('improvements-body');
+  const pending = state.improvements.filter(i => i.status === 'pending');
+  if (pending.length === 0) {
+    body.innerHTML = `<div class="empty"><div class="empty-icon">🔁</div><div class="empty-msg">No pending improvements. Run tasks first.</div></div>`;
+    return;
+  }
+  body.innerHTML = pending.map((imp, idx) => `
+    <div class="result-item" style="margin-bottom:10px;">
+      <div class="result-header">
+        <span class="result-task-id">${imp.task_id}</span>
+        <span class="priority-tag priority-${imp.priority}">${imp.priority.toUpperCase()}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text2);margin:8px 0;">${imp.suggestion}</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm btn-green" onclick="approveImprovement(${idx})">✓ Approve</button>
+        <button class="btn btn-sm btn-red" onclick="rejectImprovement(${idx})">✕ Reject</button>
+      </div>
+    </div>`).join('');
+}
+
+function approveImprovement(idx) {
+  const pending = state.improvements.filter(i => i.status === 'pending');
+  pending[idx].status = 'approved';
+  state.stats.appliedCount++;
+  addToAppliedLog(pending[idx].task_id);
+  updateStats();
+  renderImprovements();
+  addActivity(`Improvement approved for ${pending[idx].task_id}`);
+}
+
+function rejectImprovement(idx) {
+  const pending = state.improvements.filter(i => i.status === 'pending');
+  pending[idx].status = 'rejected';
+  renderImprovements();
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────
+function renderDashboard() {
+  updateStats();
+  renderLatestSummary();
+  renderTrend();
+}
+
+function updateStats() {
+  const allScores = state.runs.flatMap(r => r.tasks.filter(t=>t.status==='success').map(t=>t.feedback?.overall_score||0));
+  const avg = allScores.length ? Math.round(allScores.reduce((a,b)=>a+b,0)/allScores.length) : null;
+  document.getElementById('stat-runs').textContent = state.runs.length;
+  document.getElementById('stat-tasks').textContent = state.runs.reduce((s,r)=>s+r.task_count,0);
+  document.getElementById('stat-score').textContent = avg !== null ? `${avg}` : '—';
+  document.getElementById('stat-improvements').textContent = state.stats.appliedCount;
+}
+
+function renderLatestSummary() {
+  const body = document.getElementById('latest-summary');
+  if (state.runs.length === 0) {
+    body.innerHTML = `<div class="empty"><div class="empty-icon">🤖</div><div class="empty-msg">No runs yet. Go to Run Tasks to start.</div></div>`;
+    return;
+  }
+  const latest = state.runs[state.runs.length-1];
+  const items = latest.tasks.filter(t=>t.status==='success').map(t => {
+    const score = t.feedback.overall_score;
+    const cls = score>=75?'high':score>=50?'mid':'low';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span style="font-family:var(--mono);font-size:13px;color:var(--accent);width:90px;">${t.feedback.task_id}</span>
+      <span class="score-badge ${cls}">${score}/100</span>
+      <span style="font-size:12.5px;color:var(--text2);flex:1;">${t.feedback.one_line_assessment}</span>
+    </div>`;
+  }).join('');
+  body.innerHTML = items || '<div class="empty"><div class="empty-msg">No data</div></div>';
+}
+
+function renderTrend() {
+  const body = document.getElementById('trend-body');
+  if (state.runs.length === 0) {
+    body.innerHTML = `<div class="empty"><div class="empty-icon">📊</div><div class="empty-msg">Run tasks to see trends</div></div>`;
+    return;
+  }
+  const weeks = {};
+  state.runs.forEach(run => {
+    const d = new Date(run.timestamp);
+    const wk = `W${getWeekNumber(d)}`;
+    const scores = run.tasks.filter(t=>t.status==='success').map(t=>t.feedback?.overall_score||0);
+    if (!weeks[wk]) weeks[wk] = [];
+    weeks[wk].push(...scores);
+  });
+  const weekLabels = Object.keys(weeks);
+  const avgs = weekLabels.map(w => Math.round(weeks[w].reduce((a,b)=>a+b,0)/weeks[w].length));
+  const improving = avgs.length >= 2 && avgs[avgs.length-1] > avgs[0];
+  body.innerHTML = `<div class="trend-row">${weekLabels.map((w,i) => `
+    <div class="trend-week">
+      <div class="trend-week-label">${w}</div>
+      <div class="trend-week-score">${avgs[i]}</div>
+      <div>
+        <span class="trend-badge" style="background:rgba(47,129,247,0.1);color:var(--accent);">/100</span>
+      </div>
+    </div>`).join('')}</div>
+  <div style="margin-top:12px;font-size:12px;color:${improving?'var(--green)':'var(--yellow)'};">
+    ${improving ? '↑ Astra agent is improving' : '→ Stable — keep running tasks'}
+  </div>`;
+}
+
+function getWeekNumber(d) {
+  const onejan = new Date(d.getFullYear(),0,1);
+  return Math.ceil((((d-onejan)/86400000)+onejan.getDay()+1)/7);
+}
+
+function addActivity(msg) {
+  const log = document.getElementById('activity-log');
+  const now = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  log.innerHTML += `<div class="log-line"><span class="log-time">${now}</span><span class="log-ok">${msg}</span></div>`;
+  log.scrollTop = log.scrollHeight;
+}
+
+// ── Config ─────────────────────────────────────────────────────────
+function saveConfig() {
+  state.config.model = document.getElementById('cfg-model').value;
+  state.config.email = document.getElementById('cfg-email').value;
+  state.config.reportFreq = parseInt(document.getElementById('cfg-freq').value);
+  state.config.tasksPerDay = parseInt(document.getElementById('cfg-tasks').value);
+  state.config.runTime = document.getElementById('cfg-time').value;
+  const saved = document.getElementById('cfg-saved');
+  saved.style.display = 'inline';
+  setTimeout(() => saved.style.display = 'none', 2000);
+  document.querySelector('.sidebar-footer div:last-child').innerHTML = `Model: <span style="color:var(--text2)">${state.config.model}</span>`;
+}
+
+function saveTaskIds() {
+  const raw = document.getElementById('cfg-task-ids').value;
+  state.config.taskIds = raw.split('\n').map(s=>s.trim()).filter(Boolean);
+  renderTaskGrid();
+  alert(`✓ Task list updated. ${state.config.taskIds.length} tasks configured.`);
+}
+
+// ── Report Modal ───────────────────────────────────────────────────
+function openReportModal() { document.getElementById('report-modal').classList.add('open'); }
+function closeModal() { document.getElementById('report-modal').classList.remove('open'); }
+function sendReport() {
+  const email = document.getElementById('modal-email').value || 'Raj';
+  closeModal();
+  addActivity(`QC report sent to ${email}`);
+  alert(`✓ Report queued for delivery to ${email}`);
+}
+
+// ── Login ──────────────────────────────────────────────────────────
+// 🔐 Change these credentials as needed
+const USERS = {
+  'prajwal':  'syyclops@2024',
+  'raj':      'raj@astra2024',
+  'jan':      'jan@astra2024',
+  'daniel':   'daniel@astra2024',
+  'ahmed':    'ahmed@astra2024'
+};
+
+function doLogin() {
+  const user = document.getElementById('login-user').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const err  = document.getElementById('login-error');
+
+  if (USERS[user] && USERS[user] === pass) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    sessionStorage.setItem('qc_auth', user);
+    addActivity(`Welcome, ${user}. Session started.`);
+  } else {
+    err.style.display = 'block';
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-pass').focus();
+  }
+}
+
+// Keep session alive on page refresh
+if (sessionStorage.getItem('qc_auth')) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+
+// ── Init ───────────────────────────────────────────────────────────
+renderTaskGrid();
+renderDashboard();
+</script>
+
+</div><!-- end #app -->
+</body>
+</html>
