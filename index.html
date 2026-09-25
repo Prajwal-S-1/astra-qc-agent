@@ -4,6 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>Astra QC Agent — Syyclops</title>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@4.30.0/lib/msal-browser.min.js"
+  integrity="sha384-RGxxfG5yRS8DLU7ZJ8OoLhbV/BsJFHyPuMVHrTLbpj3t5Z15LnviJmaznKY/a7LZ" crossorigin="anonymous"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
   :root {
@@ -51,15 +53,6 @@
   .login-logo-name { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
   .login-logo-name span { color: var(--accent); }
   .login-sub { font-size: 12.5px; color: var(--text3); margin-bottom: 28px; }
-  .login-label { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 6px; }
-  .login-input {
-    width: 100%; padding: 9px 12px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--text); font-size: 13.5px;
-    font-family: var(--sans); outline: none; margin-bottom: 14px;
-    transition: border 0.15s;
-  }
-  .login-input:focus { border-color: var(--accent); }
   .login-btn {
     width: 100%; padding: 10px;
     background: var(--accent); color: white;
@@ -67,17 +60,17 @@
     font-size: 14px; font-weight: 600;
     cursor: pointer; font-family: var(--sans);
     transition: background 0.15s; margin-top: 4px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
   }
   .login-btn:hover { background: var(--accent2); }
+  .login-btn:disabled { opacity: 0.6; cursor: default; }
+  .login-btn svg { flex-shrink: 0; background: white; padding: 2px; border-radius: 2px; }
   .login-error {
     font-size: 12px; color: var(--red);
     background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.2);
     border-radius: 6px; padding: 8px 12px;
     margin-bottom: 14px; display: none;
   }
-  .login-switch { font-size: 12.5px; color: var(--text2); text-align: center; margin-top: 16px; }
-  .login-switch a { color: var(--accent); text-decoration: none; font-weight: 600; }
-  .login-switch a:hover { text-decoration: underline; }
   .login-footer { font-size: 11px; color: var(--text3); text-align: center; margin-top: 20px; }
 
   #app { display: none; width: 100%; }
@@ -108,9 +101,6 @@
   }
   .user-dropdown-item:hover { background: var(--surface2); color: var(--text); }
   .user-dropdown-item.danger { color: var(--red); }
-  .form-msg { font-size: 12px; align-self: center; display: none; }
-  .form-msg.ok { color: var(--green); }
-  .form-msg.err { color: var(--red); }
   .form-hint { font-size: 11.5px; color: var(--text3); margin-top: 5px; }
 
   /* Sidebar */
@@ -429,24 +419,15 @@
   <div class="login-box">
     <div class="login-logo-mark">Syyclops</div>
     <div class="login-logo-name">Astra <span>QC</span></div>
-    <div class="login-sub" id="login-sub">Sign in with your @syyclops.com account</div>
+    <div class="login-sub">Sign in with your Syyclops Microsoft account</div>
     <div class="login-error" id="login-error"></div>
-    <div id="signup-name-field" style="display:none">
-      <label class="login-label">Full Name</label>
-      <input class="login-input" id="login-name" type="text" placeholder="Your name" autocomplete="name"/>
-    </div>
-    <label class="login-label">Work Email</label>
-    <input class="login-input" id="login-user" type="email" placeholder="Enter your email" autocomplete="email"/>
-    <label class="login-label">Password</label>
-    <input class="login-input" id="login-pass" type="password" placeholder="Enter password" autocomplete="current-password"
-      onkeydown="if(event.key==='Enter') submitAuth()"/>
-    <div id="signup-confirm-field" style="display:none">
-      <label class="login-label">Confirm Password</label>
-      <input class="login-input" id="login-pass2" type="password" placeholder="Re-enter password" autocomplete="new-password"
-        onkeydown="if(event.key==='Enter') submitAuth()"/>
-    </div>
-    <button class="login-btn" id="login-btn" onclick="submitAuth()">Sign In</button>
-    <div class="login-switch" id="login-switch">New to Astra QC? <a href="#" onclick="toggleAuthMode(); return false;">Create an account</a></div>
+    <button class="login-btn" id="login-btn" onclick="signInWithMicrosoft()">
+      <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true">
+        <rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+        <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+      </svg>
+      <span id="login-btn-label">Sign in with Microsoft</span>
+    </button>
     <div class="login-footer">Astra QC Agent · Syyclops Internal Tool</div>
   </div>
 </div>
@@ -730,54 +711,21 @@ task_006</textarea>
           <div class="config-grid">
             <div class="form-group">
               <label class="form-label">Full Name</label>
-              <input class="form-input" id="acc-name" autocomplete="name"/>
+              <input class="form-input" id="acc-name" readonly/>
             </div>
             <div class="form-group">
               <label class="form-label">Work Email</label>
-              <input class="form-input" id="acc-email" type="email" autocomplete="email"/>
-              <div class="form-hint">Must be an @syyclops.com address.</div>
+              <input class="form-input" id="acc-email" type="email" readonly/>
             </div>
           </div>
-          <div style="display:flex;gap:10px;margin-top:8px;">
-            <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
-            <span class="form-msg" id="acc-profile-msg"></span>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header"><div class="card-title">Change Password</div></div>
-        <div class="card-body">
-          <div class="config-grid">
-            <div>
-              <div class="form-group">
-                <label class="form-label">Current Password</label>
-                <input class="form-input" id="acc-cur-pass" type="password" autocomplete="current-password"/>
-              </div>
-            </div>
-            <div>
-              <div class="form-group">
-                <label class="form-label">New Password</label>
-                <input class="form-input" id="acc-new-pass" type="password" autocomplete="new-password"/>
-                <div class="form-hint">At least 8 characters.</div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Confirm New Password</label>
-                <input class="form-input" id="acc-new-pass2" type="password" autocomplete="new-password"/>
-              </div>
-            </div>
-          </div>
-          <div style="display:flex;gap:10px;margin-top:8px;">
-            <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
-            <span class="form-msg" id="acc-pass-msg"></span>
-          </div>
+          <div class="form-hint">Your name, email and password are managed by your Syyclops Microsoft account.</div>
         </div>
       </div>
 
       <div class="card">
         <div class="card-header"><div class="card-title">Session</div></div>
         <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
-          <div style="font-size:13px;color:var(--text2);">Signed in as <span id="acc-session-email" style="color:var(--text);font-weight:600;"></span></div>
+          <div style="font-size:13px;color:var(--text2);">Signed in with Microsoft as <span id="acc-session-email" style="color:var(--text);font-weight:600;"></span></div>
           <button class="btn btn-red" onclick="doLogout()">⎋ Log out</button>
         </div>
       </div>
@@ -1243,33 +1191,17 @@ function sendReport() {
 }
 
 // ── Login ──────────────────────────────────────────────────────────
-// Only @syyclops.com accounts may sign in or register.
-// Accounts are stored in this browser's localStorage (passwords hashed with SHA-256).
+// Sign-in uses Microsoft Entra ID via MSAL.js (redirect flow). Only accounts in the
+// Syyclops tenant with an @syyclops.com address are let in.
+// Setup: register a "Single-page application" in Entra ID with this page's URL as a
+// redirect URI, then fill in the two IDs below.
+const MS_CLIENT_ID = '92233648-2db2-4cfb-b325-288f86cb7967';  // Application (client) ID
+const MS_TENANT_ID = '88061fa7-d4b6-4e1a-9ab2-65f5188a3845';  // Directory (tenant) ID
 const ALLOWED_DOMAIN = 'syyclops.com';
-const USERS_KEY = 'qc_users';
-let authMode = 'signin';
+const LOGIN_SCOPES = ['openid', 'profile', 'email'];
 
-function loadUsers() {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; } catch (e) { return {}; }
-}
-function saveUsers(users) { localStorage.setItem(USERS_KEY, JSON.stringify(users)); }
-
-function isAllowedEmail(email) {
-  return /^[^\s@]+@[^\s@]+$/.test(email) && email.split('@')[1] === ALLOWED_DOMAIN;
-}
-
-// Each account has its own random salt so the email can change without re-hashing.
-// Accounts created before salts existed fall back to their original email.
-function newSalt() {
-  return Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-function userSalt(user, email) { return user.salt || email; }
-
-async function hashPassword(salt, pass) {
-  const data = new TextEncoder().encode(salt + ':' + pass);
-  const buf = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
+let msalApp = null;
+let currentAccount = null;
 
 function showAuthError(msg) {
   const err = document.getElementById('login-error');
@@ -1277,33 +1209,73 @@ function showAuthError(msg) {
   err.style.display = 'block';
 }
 
-function toggleAuthMode() {
-  authMode = authMode === 'signin' ? 'signup' : 'signin';
-  const signup = authMode === 'signup';
-  document.getElementById('signup-name-field').style.display = signup ? 'block' : 'none';
-  document.getElementById('signup-confirm-field').style.display = signup ? 'block' : 'none';
-  document.getElementById('login-sub').textContent = signup
-    ? 'Create an account with your @syyclops.com email'
-    : 'Sign in with your @syyclops.com account';
-  document.getElementById('login-btn').textContent = signup ? 'Create Account' : 'Sign In';
-  document.getElementById('login-pass').autocomplete = signup ? 'new-password' : 'current-password';
-  document.getElementById('login-switch').innerHTML = signup
-    ? 'Already have an account? <a href="#" onclick="toggleAuthMode(); return false;">Sign in</a>'
-    : 'New to Astra QC? <a href="#" onclick="toggleAuthMode(); return false;">Create an account</a>';
-  document.getElementById('login-error').style.display = 'none';
+function setLoginBusy(busy, label) {
+  document.getElementById('login-btn').disabled = busy;
+  document.getElementById('login-btn-label').textContent = busy ? label : 'Sign in with Microsoft';
 }
 
-function enterApp(email, name) {
+function accountEmail(account) {
+  return (account.username || account.idTokenClaims?.email || '').toLowerCase();
+}
+
+function isAllowedAccount(account) {
+  return account.tenantId === MS_TENANT_ID && accountEmail(account).endsWith('@' + ALLOWED_DOMAIN);
+}
+
+async function initAuth() {
+  if (!window.msal) return showAuthError('Could not load Microsoft sign-in. Check your connection and reload.');
+  if (!MS_CLIENT_ID || !MS_TENANT_ID) return showAuthError('Microsoft sign-in is not configured (set MS_CLIENT_ID and MS_TENANT_ID).');
+
+  msalApp = new msal.PublicClientApplication({
+    auth: {
+      clientId: MS_CLIENT_ID,
+      authority: `https://login.microsoftonline.com/${MS_TENANT_ID}`,
+      redirectUri: location.origin + location.pathname,
+    },
+    cache: { cacheLocation: 'sessionStorage' },
+  });
+
+  setLoginBusy(true, 'Checking sign-in…');
+  try {
+    await msalApp.initialize();
+    const result = await msalApp.handleRedirectPromise();
+    const account = result?.account || msalApp.getActiveAccount() || msalApp.getAllAccounts()[0];
+    if (account) await acceptAccount(account, !!result);
+  } catch (e) {
+    showAuthError(`Microsoft sign-in failed: ${e.errorMessage || e.message}`);
+  } finally {
+    setLoginBusy(false);
+  }
+}
+
+async function signInWithMicrosoft() {
+  if (!msalApp) return initAuth();
+  document.getElementById('login-error').style.display = 'none';
+  setLoginBusy(true, 'Redirecting to Microsoft…');
+  try {
+    await msalApp.loginRedirect({ scopes: LOGIN_SCOPES, prompt: 'select_account', domainHint: ALLOWED_DOMAIN });
+  } catch (e) {
+    setLoginBusy(false);
+    showAuthError(`Microsoft sign-in failed: ${e.errorMessage || e.message}`);
+  }
+}
+
+async function acceptAccount(account, fresh) {
+  if (!isAllowedAccount(account)) {
+    await msalApp.clearCache({ account });
+    return showAuthError(`Only @${ALLOWED_DOMAIN} Microsoft accounts are allowed.`);
+  }
+  msalApp.setActiveAccount(account);
+  currentAccount = account;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  sessionStorage.setItem('qc_auth', email);
   updateUserUI();
-  addActivity(`Welcome, ${name || email}. Session started.`);
+  if (fresh) addActivity(`Welcome, ${account.name || accountEmail(account)}. Session started.`);
 }
 
 // ── Account ────────────────────────────────────────────────────────
-function currentEmail() { return sessionStorage.getItem('qc_auth') || ''; }
-function currentUser() { return loadUsers()[currentEmail()]; }
+function currentEmail() { return currentAccount ? accountEmail(currentAccount) : ''; }
+function currentName() { return currentAccount?.name || ''; }
 
 function initials(name, email) {
   const parts = (name || email.split('@')[0]).trim().split(/\s+/);
@@ -1312,9 +1284,8 @@ function initials(name, email) {
 
 function updateUserUI() {
   const email = currentEmail();
-  const user = currentUser() || {};
-  document.getElementById('user-avatar').textContent = initials(user.name, email);
-  document.getElementById('user-menu-name').textContent = user.name || '';
+  document.getElementById('user-avatar').textContent = initials(currentName(), email);
+  document.getElementById('user-menu-name').textContent = currentName();
   document.getElementById('user-menu-email').textContent = email;
 }
 
@@ -1327,129 +1298,24 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.user-menu')) closeUserMenu();
 });
 
-function showFormMsg(id, msg, ok) {
-  const el = document.getElementById(id);
-  el.textContent = msg;
-  el.className = 'form-msg ' + (ok ? 'ok' : 'err');
-  el.style.display = 'inline';
-  if (ok) setTimeout(() => { el.style.display = 'none'; }, 2500);
-}
-
 function renderAccount() {
-  const user = currentUser() || {};
-  document.getElementById('acc-name').value = user.name || '';
+  document.getElementById('acc-name').value = currentName();
   document.getElementById('acc-email').value = currentEmail();
   document.getElementById('acc-session-email').textContent = currentEmail();
-  ['acc-cur-pass', 'acc-new-pass', 'acc-new-pass2'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  ['acc-profile-msg', 'acc-pass-msg'].forEach(id => { document.getElementById(id).style.display = 'none'; });
 }
 
-async function saveProfile() {
-  const oldEmail = currentEmail();
-  const users = loadUsers();
-  const user = users[oldEmail];
-  if (!user) return doLogout();
-
-  const name = document.getElementById('acc-name').value.trim();
-  const newEmail = document.getElementById('acc-email').value.trim().toLowerCase();
-  if (!name) return showFormMsg('acc-profile-msg', 'Name cannot be empty.');
-  if (!isAllowedEmail(newEmail)) return showFormMsg('acc-profile-msg', `Only @${ALLOWED_DOMAIN} email addresses are allowed.`);
-
-  if (newEmail !== oldEmail) {
-    if (users[newEmail]) return showFormMsg('acc-profile-msg', 'That email is already used by another account.');
-    user.salt = userSalt(user, oldEmail);
-    delete users[oldEmail];
-    sessionStorage.setItem('qc_auth', newEmail);
-  }
-
-  user.name = name;
-  users[newEmail] = user;
-  saveUsers(users);
-  updateUserUI();
-  renderAccount();
-  showFormMsg('acc-profile-msg', '✓ Profile updated', true);
-  addActivity('Account profile updated.');
-}
-
-async function changePassword() {
-  const email = currentEmail();
-  const users = loadUsers();
-  const user = users[email];
-  if (!user) return doLogout();
-
-  const cur  = document.getElementById('acc-cur-pass').value;
-  const next = document.getElementById('acc-new-pass').value;
-  const next2 = document.getElementById('acc-new-pass2').value;
-  if (await hashPassword(userSalt(user, email), cur) !== user.hash) return showFormMsg('acc-pass-msg', 'Current password is incorrect.');
-  if (next.length < 8) return showFormMsg('acc-pass-msg', 'New password must be at least 8 characters.');
-  if (next !== next2) return showFormMsg('acc-pass-msg', 'New passwords do not match.');
-
-  user.hash = await hashPassword(userSalt(user, email), next);
-  saveUsers(users);
-  renderAccount();
-  showFormMsg('acc-pass-msg', '✓ Password updated', true);
-  addActivity('Account password changed.');
-}
-
-function doLogout() {
+// Signs out of Astra QC only; the Microsoft session elsewhere is left alone.
+async function doLogout() {
   closeUserMenu();
-  sessionStorage.removeItem('qc_auth');
+  if (msalApp && currentAccount) await msalApp.clearCache({ account: currentAccount });
+  currentAccount = null;
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-  if (authMode === 'signup') toggleAuthMode();
-  ['login-name', 'login-user', 'login-pass', 'login-pass2'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
   document.getElementById('login-error').style.display = 'none';
   showPage('dashboard');
 }
 
-async function submitAuth() {
-  const email = document.getElementById('login-user').value.trim().toLowerCase();
-  const pass  = document.getElementById('login-pass').value;
-  document.getElementById('login-error').style.display = 'none';
-
-  if (!isAllowedEmail(email)) {
-    return showAuthError(`Only @${ALLOWED_DOMAIN} email addresses are allowed.`);
-  }
-
-  const users = loadUsers();
-
-  if (authMode === 'signup') {
-    const name  = document.getElementById('login-name').value.trim();
-    const pass2 = document.getElementById('login-pass2').value;
-    if (!name) return showAuthError('Please enter your name.');
-    if (users[email]) return showAuthError('An account with this email already exists. Please sign in.');
-    if (pass.length < 8) return showAuthError('Password must be at least 8 characters.');
-    if (pass !== pass2) return showAuthError('Passwords do not match.');
-    const salt = newSalt();
-    const hash = await hashPassword(salt, pass);
-    users[email] = { name, salt, hash, createdAt: new Date().toISOString() };
-    saveUsers(users);
-    enterApp(email, name);
-    return;
-  }
-
-  const user = users[email];
-  if (user && user.hash === await hashPassword(userSalt(user, email), pass)) {
-    enterApp(email, user.name);
-  } else {
-    showAuthError('Incorrect email or password.');
-    document.getElementById('login-pass').value = '';
-    document.getElementById('login-pass').focus();
-  }
-}
-
-// Keep session alive on page refresh (only if the account still exists)
-if (isAllowedEmail(currentEmail()) && currentUser()) {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  updateUserUI();
-} else {
-  sessionStorage.removeItem('qc_auth');
-}
+initAuth();
 
 // ── Init ───────────────────────────────────────────────────────────
 renderTaskGrid();
